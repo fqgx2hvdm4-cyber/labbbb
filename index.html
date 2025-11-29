@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Анімація + Орбіти + Фото</title>
+<style>
+:root{
+  --bg1:#050508;
+}
+html,body{
+  height:100%;
+  margin:0;
+  background:var(--bg1);
+  font-family:Arial,sans-serif;
+  overflow:hidden;
+  color:#fff;
+}
+canvas#c{
+  position:fixed;
+  inset:0;
+  width:100vw;
+  height:100vh;
+  display:block;
+  z-index:1;
+}
+
+/* Центральна анімація (пульсуюче коло) */
+.pulse-circle{
+  position:absolute;
+  left:50%;
+  top:50%;
+  transform:translate(-50%,-50%);
+  width:100px;
+  height:100px;
+  border-radius:50%;
+  background:linear-gradient(45deg,#fd6e72,#fdf9de);
+  animation:pulse 2s infinite alternate;
+  z-index:6;
+}
+
+@keyframes pulse{
+  0%{transform:translate(-50%,-50%) scale(0.8);}
+  50%{transform:translate(-50%,-50%) scale(1.2);}
+  100%{transform:translate(-50%,-50%) scale(1);}
+}
+
+/* Три фото внизу */
+.images{
+  position:fixed;
+  bottom:18px;
+  left:50%;
+  transform:translateX(-50%);
+  display:flex;
+  gap:14px;
+  z-index:12;
+}
+.photo{
+  width:220px;
+  height:150px;
+  border-radius:8px;
+  background-position:center;
+  background-repeat:no-repeat;
+  background-size:cover;
+  box-shadow:0 4px 12px rgba(0,0,0,0.5);
+  border:2px solid rgba(255,255,255,0.08);
+}
+@media(max-width:900px){.photo{width:170px;height:120px;}}
+@media(max-width:520px){.images{flex-direction:column;gap:8px;bottom:8px;}.photo{width:140px;height:100px;}}
+</style>
+</head>
+<body>
+
+<canvas id="c"></canvas>
+
+<!-- Центральна анімація -->
+<div class="pulse-circle"></div>
+
+<!-- Три фотографії -->
+<div class="images">
+  <div class="photo" style="background-image:url('cat.png');"></div>
+  <div class="photo" style="background-image:url('cat.jpg');"></div>
+  <div class="photo" style="background-image:url('cat.webp');"></div>
+</div>
+
+<script>
+/* Анімація орбіт */
+window.requestAnimFrame = (function(){
+  return window.requestAnimationFrame || window.webkitRequestAnimationFrame ||
+         window.mozRequestAnimationFrame || function(callback){ window.setTimeout(callback,1000/60); };
+})();
+const c=document.getElementById('c'), ctx=c.getContext('2d');
+let dpr=window.devicePixelRatio||1, cw=window.innerWidth, ch=window.innerHeight;
+c.width=cw*dpr; c.height=ch*dpr; ctx.scale(dpr,dpr);
+ctx.lineCap='round';
+let orbs=[], trail=true;
+function rand(min,max){return Math.random()*(max-min)+min;}
+function createOrb(mx,my){
+  let dx=cw/2-mx, dy=ch/2-my;
+  let dist=Math.sqrt(dx*dx+dy*dy), angle=Math.atan2(dy,dx);
+  orbs.push({x:mx,y:my,lastX:mx,lastY:my,hue:0,colorAngle:0,angle:angle+Math.PI/2,size:rand(0.5,1.5),
+    centerX:cw/2,centerY:ch/2,radius:dist,speed:(rand(5,10)/1000)*(dist/750)+0.015,
+    draw:function(){ctx.strokeStyle='hsla('+this.colorAngle+',100%,50%,1)';ctx.lineWidth=this.size;ctx.beginPath();ctx.moveTo(this.lastX,this.lastY);ctx.lineTo(this.x,this.y);ctx.stroke();},
+    update:function(){this.lastX=this.x; this.lastY=this.y; this.x=this.centerX+Math.sin(-this.angle)*this.radius; this.y=this.centerY+Math.cos(-this.angle)*this.radius; this.angle+=this.speed; this.colorAngle=Math.floor(Math.atan2(this.y-this.centerY,this.x-this.centerX)*180/Math.PI)||0;}
+  });
+}
+for(let i=0;i<100;i++) createOrb(cw/2,ch/2+(i*2));
+c.addEventListener('mousedown', e=>{ createOrb(e.pageX,e.pageY); c.addEventListener('mousemove',move,false); });
+window.addEventListener('mouseup', ()=>c.removeEventListener('mousemove',move,false));
+function move(e){ createOrb(e.pageX,e.pageY);}
+function loop(){
+  requestAnimFrame(loop);
+  if(trail){ctx.fillStyle='rgba(0,0,0,0.12)'; ctx.fillRect(0,0,cw,ch);} else ctx.clearRect(0,0,cw,ch);
+  for(let orb of orbs){ orb.update(); orb.update(); orb.draw();}
+}
+loop();
+</script>
+</body>
+</html>
